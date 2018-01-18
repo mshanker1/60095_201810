@@ -211,4 +211,19 @@ axis(1, at = seq(1991, 2006, 1), labels = format(seq(1991, 2006, 1)))
 lines(valid.ts - train.lm.trend.season.pred$mean, lwd = 1)
 ```
 
+Let us calculate Autocorrelation
+```{r}
+ridership.ts <- ts(Amtrak.data$Ridership, 
+    start = c(1991, 1), end = c(2004, 3), freq = 12)
+nValid <- 36
+nTrain <- length(ridership.ts) - nValid
+# partition the data
+train.ts <- window(ridership.ts, start = c(1991, 1), end = c(1991, nTrain))
+valid.ts <- window(ridership.ts, start = c(1991, nTrain + 1),
+                   end = c(1991, nTrain + nValid))
+# now let's calculate the autocorrelation for a 24-month ridership
+ridership.24.ts <- window(train.ts, start = c(1991, 1), end = c(1991, 24))
+forecast::Acf(ridership.24.ts, lag.max = 12, main = "")
+
+```
 
