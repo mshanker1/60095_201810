@@ -221,4 +221,27 @@ Acf(train.lm.trend.season$residuals, lag.max = 12, main="")
 #Let us also display partial autocorrelation
 Pacf(train.lm.trend.season$residuals, lag.max = 12, main="")
 ```
+```{r}
+# fit linear regression with quadratic trend and seasonality to Ridership 
+train.lm.trend.season <- tslm(train.ts ~ trend + I(trend^2) + season) 
+# fit AR(1) model to training residuals 
+# use Arima() in the forecast package to fit an ARIMA model # (that includes AR models); order = c(1,0,0) gives an AR(1). 
+train.res.arima <- Arima(train.lm.trend.season$residuals, order = c(1,0,0)) 
+valid.res.arima.pred <- forecast(train.res.arima, h = 1) 
+#Output > 
+summary(train.res.arima)
+```
 
+Thus, our AR(1) model is 
+Et = 0.3728 + 0.5998 * E(t-1) + epsilon
+
+To now forecast residual for April 2001, we plug in the residual from the most recent residual from March 2001 (12.108) into the AR(1) model, this gives
+
+0.3728 + 0.5998 * (12.108 - 0.3728)
+
+The answer is 7.411. We can get this directly using the forecast() function
+```{r}
+valid.res.arima.pred
+```
+
+The positive value indicates that the regression will produce a forecasted value for April 2001 that is too low, and that we should add 7411 riders to the forecasted value. In this particular example, the regression model (with quadratic trend and seasonality) produced a forecast of 2,004,271 riders, and the improved two-stage model [regression + AR(1) correction] corrected it by increasing it to 2,011,906 riders. The actual value for April 2001 turned out to be 2,023,792 riders—much closer to the improved forecast.

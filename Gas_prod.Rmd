@@ -78,3 +78,23 @@ pacf(arima_2$residuals, xaxp = c(0, 48,4), lag.max=48, main="")
 
 ```
 
+Now, let us use the arima_2 model to forecast
+```{r}
+# Forecasting
+
+#predict the next 12 months
+arima_2.predict <- predict(arima_2,n.ahead=12)
+matrix(c(arima_2.predict$pred-1.96*arima_2.predict$se,
+         arima_2.predict$pred,
+         arima_2.predict$pred+1.96*arima_2.predict$se), 12,3,
+       dimnames=list( c(241:252) ,c("LB","Pred","UB")) )
+
+plot(gas_prod, xlim=c(145,252),
+     xlab = "Time (months)",
+     ylab = "Gasoline production (millions of barrels)",
+     ylim=c(360,440))
+lines(arima_2.predict$pred)
+lines(arima_2.predict$pred+1.96*arima_2.predict$se, col=4, lty=2)
+lines(arima_2.predict$pred-1.96*arima_2.predict$se, col=4, lty=2)
+```
+
