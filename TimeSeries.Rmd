@@ -31,8 +31,8 @@ ridership.ts.3yrs <- window(ridership.ts, start = c(1997, 1), end = c(1999, 12))
 ```
 # fit a linear regression model to the time series
 ```{r}
-ridership.lm <- forecast::tslm(ridership.ts ~ trend + I(trend^2))
-
+library(forecast)
+ridership.lm <- tslm(ridership.ts ~ trend + I(trend^2))
 ```
 # shorter and longer time series
 
@@ -69,7 +69,7 @@ plot(train.ts, ylim = c(1300, 2600),  ylab = "Ridership", xlab = "Time", bty = "
     xaxt = "n", xlim = c(1991,2006.25), main = "") 
 axis(1, at = seq(1991, 2006, 1), labels = format(seq(1991, 2006, 1)))
 lines(naive.pred$mean, lwd = 2, col = "blue", lty = 1)
-lines(snaive.pred$mean, lwd = 2, col = "blue", lty = 1)
+lines(snaive.pred$mean, lwd = 2, col = "red", lty = 1)
 lines(valid.ts, col = "grey20", lty = 3)
 lines(c(2004.25 - 3, 2004.25 - 3), c(0, 3500)) 
 lines(c(2004.25, 2004.25), c(0, 3500))
@@ -89,9 +89,9 @@ forecast::accuracy(snaive.pred, valid.ts)
 Now, let us model the time series using regression models
 Linear Trend
 ```{r}
-library(forecast)
+#library(forecast)
 
-Amtrak.data <- read.csv("Amtrak.csv")
+#Amtrak.data <- read.csv("Amtrak.csv")
 
 # create time series
 ridership.ts <- ts(Amtrak.data$Ridership, start = c(1991,1),
@@ -208,22 +208,7 @@ lines(valid.ts)
 plot(train.lm.trend.season$residuals, ylim = c(-400, 550),  ylab = "Forecast Errors", 
  xlab = "Time", bty = "l", xaxt = "n", xlim = c(1991,2006.25), main = "")
 axis(1, at = seq(1991, 2006, 1), labels = format(seq(1991, 2006, 1)))
-lines(valid.ts - train.lm.trend.season.pred$mean, lwd = 1)
+lines(valid.ts - train.lm.trend.season.pred$mean, lwd = 1, col="red")
 ```
 
-Let us calculate Autocorrelation
-```{r}
-ridership.ts <- ts(Amtrak.data$Ridership, 
-    start = c(1991, 1), end = c(2004, 3), freq = 12)
-nValid <- 36
-nTrain <- length(ridership.ts) - nValid
-# partition the data
-train.ts <- window(ridership.ts, start = c(1991, 1), end = c(1991, nTrain))
-valid.ts <- window(ridership.ts, start = c(1991, nTrain + 1),
-                   end = c(1991, nTrain + nValid))
-# now let's calculate the autocorrelation for a 24-month ridership
-ridership.24.ts <- window(train.ts, start = c(1991, 1), end = c(1991, 24))
-forecast::Acf(ridership.24.ts, lag.max = 12, main = "")
-
-```
 
