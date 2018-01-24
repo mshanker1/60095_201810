@@ -89,11 +89,12 @@ forecast::accuracy(snaive.pred, valid.ts)
 Now, let us model the time series using regression models
 Linear Trend
 ```{r}
-#library(forecast)
+library(forecast)
 
 #Amtrak.data <- read.csv("Amtrak.csv")
 
 # create time series
+
 ridership.ts <- ts(Amtrak.data$Ridership, start = c(1991,1),
                    end = c(2004,3), freq = 12)
 
@@ -210,5 +211,14 @@ plot(train.lm.trend.season$residuals, ylim = c(-400, 550),  ylab = "Forecast Err
 axis(1, at = seq(1991, 2006, 1), labels = format(seq(1991, 2006, 1)))
 lines(valid.ts - train.lm.trend.season.pred$mean, lwd = 1, col="red")
 ```
-
+Now let's calculate the autocorrelation
+```{r}
+ridership.24.ts <- window(train.ts, start = c(1991, 1), end = c(1991, 24)) 
+Acf(ridership.24.ts, lag.max = 12, main = "")
+# We can also look at the autocorrelation of the residuals
+# For example, we calculate the autocorrelation of the residuals after fitting for season and trend
+Acf(train.lm.trend.season$residuals, lag.max = 12, main="")
+#Let us also display partial autocorrelation
+Pacf(train.lm.trend.season$residuals, lag.max = 12, main="")
+```
 
