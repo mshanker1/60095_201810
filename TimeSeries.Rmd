@@ -2,7 +2,10 @@
 title: "Time Series Forecasting"
 output: html_notebook
 ---
-Reference: 
+References: 
+Data Mining for Business Analytics, Shmueli, et al.
+EMC 
+Code and references have been derived from the above books.
 
 ```{r}
 #install.packages("forecast")
@@ -245,3 +248,12 @@ valid.res.arima.pred
 ```
 
 The positive value indicates that the regression will produce a forecasted value for April 2001 that is too low, and that we should add 7411 riders to the forecasted value. In this particular example, the regression model (with quadratic trend and seasonality) produced a forecast of 2,004,271 riders, and the improved two-stage model [regression + AR(1) correction] corrected it by increasing it to 2,011,906 riders. The actual value for April 2001 turned out to be 2,023,792 riders—much closer to the improved forecast.
+
+From the plot of the actual vs. forecasted residual series (below), we can see that the AR(1) model fits the residual series quite well. Note, however, that the plot is based on the training data (until March 2001). To evaluate predictive performance of the two-level model [regression + AR(1)], we would have to examine performance (e.g., via MAPE or RMSE metrics) on the validation data, in a fashion similar to the calculation that we performed for April 2001.
+```{r}
+plot(train.lm.trend.season$residuals, ylim = c(-250, 250), ylab = "Residuals", 
+     xlab = "Time", bty = "l", xaxt = "n", xlim = c(1991,2006.25), main = "")
+axis(1, at = seq(1991, 2006, 1), labels = format(seq(1991, 2006, 1)))
+lines(train.res.arima$fitted, lwd = 2, col = "blue")
+```
+
