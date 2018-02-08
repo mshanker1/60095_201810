@@ -240,9 +240,11 @@ Et = 0.3728 + 0.5998 * E(t-1) + epsilon
 
 To now forecast residual for April 2001, we plug in the residual from the most recent residual from March 2001 (12.108) into the AR(1) model, this gives
 
-0.3728 + 0.5998 * (12.108 - 0.3728)
+0.3728 + 0.5998 * (12.108 - 0.3728)**
 
 The answer is 7.411. We can get this directly using the forecast() function
+
+** Note: The intercept in the Coefficients table resulting from function Arima() is not exactly an intercept—it is the estimated mean of the series. Hence, to get a forecast, we must subtract this coefficient from our value. In this case, we have Ft + 1 = intercept + slope (yt − intercept).
 ```{r}
 valid.res.arima.pred
 ```
@@ -255,5 +257,147 @@ plot(train.lm.trend.season$residuals, ylim = c(-250, 250), ylab = "Residuals",
      xlab = "Time", bty = "l", xaxt = "n", xlim = c(1991,2006.25), main = "")
 axis(1, at = seq(1991, 2006, 1), labels = format(seq(1991, 2006, 1)))
 lines(train.res.arima$fitted, lwd = 2, col = "blue")
+```
+
+Now, let us consider data-driven methods. Specifically, smoothing methods.
+
+Let us look at moving averages
+
+How should w be chosen for a seasonal series?
+
+```{r}
+Amtrak.data <- read.csv("Amtrak.csv")
+Amtrak.data
+ridership.ts <- ts(Amtrak.data$Ridership, 
+    start = c(1991, 1), end = c(2004, 3), freq = 12)
+```
+```{r}
+library(zoo)
+# centered moving average with window order = 12
+ma.centered <- ma(ridership.ts, order = 12)
+
+# generate a plot 
+plot(ridership.ts, ylim = c(1300, 2200),  ylab = "Ridership", 
+    xlab = "Time", bty = "l", xaxt = "n", 
+    xlim = c(1991,2004.25), main = "")
+axis(1, at = seq(1991, 2004.25, 1), labels = format(seq(1991, 2004.25, 1)))
+lines(ma.centered, lwd = 2)
+legend(1994,2200, c("Ridership","Centered Moving Average"), 
+    lty=c(1,1), lwd=c(1,2), bty = "n")  
+```
+
+Now, let's plot a trailing moving average
+
+```{r}
+# centered moving average with window order = 12
+ma.centered <- ma(ridership.ts, order = 12)
+
+# trailing moving average with window k = 12
+# in rollmean(), use argument align = right to calculate a trailing moving average.
+ma.trailing <- rollmean(ridership.ts, k = 12, align = "right")
+
+# generate a plot 
+plot(ridership.ts, ylim = c(1300, 2200),  ylab = "Ridership", 
+    xlab = "Time", bty = "l", xaxt = "n", 
+    xlim = c(1991,2004.25), main = "")
+axis(1, at = seq(1991, 2004.25, 1), labels = format(seq(1991, 2004.25, 1)))
+lines(ma.centered, lwd = 2)
+lines(ma.trailing, lwd = 2, lty = 2)
+legend(1994,2200, c("Ridership","Centered Moving Average", "Trailing Moving Average"), 
+    lty=c(1,1,2), lwd=c(1,2,2), bty = "n")  
+
+```
+
+Next, we illustrate a 12-month moving average forecaster for the Amtrak ridership. We partition the Amtrak ridership time series, leaving the last 36 months as the validation period. Applying a moving average forecaster with window w = 12. Note that for the first 12 records of the training period, there is no forecast (because there are less than 12 past values to average). Also, note that the forecasts for all months in the validation period are identical (1938.481) because the method assumes that information is known only until March 2001.
+```{r}
+# partition the data
+nValid <- 36
+nTrain <- length(ridership.ts) - nValid
+train.ts <- window(ridership.ts, start = c(1991, 1), end = c(1991, nTrain))
+valid.ts <- window(ridership.ts, start = c(1991, nTrain + 1), 
+    end = c(1991, nTrain + nValid))
+
+# moving average on training
+ma.trailing <- rollmean(train.ts, k = 12, align = "right")
+
+# obtain the last moving average in the training period
+last.ma <- tail(ma.trailing, 1)
+
+# create forecast based on last MA
+ma.trailing.pred <- ts(rep(last.ma, nValid), start = c(1991, nTrain + 1), 
+    end = c(1991, nTrain + nValid), freq = 12)
+    
+# plot the series
+plot(train.ts, ylim = c(1300, 2600),  ylab = "Ridership", xlab = "Time", bty = "l", 
+    xaxt = "n", xlim = c(1991,2006.25), main = "")
+axis(1, at = seq(1991, 2006, 1), labels = format(seq(1991, 2006, 1)))
+lines(ma.trailing, lwd = 2, col = "blue") 
+lines(ma.trailing.pred, lwd = 2, col = "blue", lty = 2)
+lines(valid.ts)
+```
+
+Consider the regression model shown in Figure 17.6 in Chapter 17, which yields residuals devoid of seasonality and trend (see bottom chart). We can apply a moving average forecaster to that series of residuals (also called forecast errors), thereby creating a forecast for the next forecast error. 
+```{r}
+AmtrakTS.data <- read.csv("AmtrakTS.csv")
+AmtrakTS.data
+ridership.ts <- ts(AmtrakTS.data$Ridership, 
+    start = c(1991, 1), end = c(2004, 3), freq = 12)
+nValid <- 36
+nTrain <- length(ridership.ts) - nValid
+# partition the data
+train.ts <- window(ridership.ts, start = c(1991, 1), end = c(1991, nTrain))
+valid.ts <- window(ridership.ts, start = c(1991, nTrain + 1),
+                   end = c(1991, nTrain + nValid))
+# fit regression model with trend and seasonality
+train.lm.trend.season <- tslm(train.ts ~ trend + I(trend^2) + season)
+
+# create single-point forecast
+train.lm.trend.season.pred <- forecast(train.lm.trend.season, h = 1, level = 0)
+
+# apply MA to residuals
+ma.trailing <- rollmean(train.lm.trend.season$residuals, k = 12, align = "right")
+last.ma <- tail(ma.trailing, 1)
+train.lm.trend.season.pred
+last.ma
+```
+
+Now, let's apply exponential smoothing to the residuals from our previous model. The residuals are assumed to have no trend or seasonality
+```{r}
+# get residuals
+residuals.ts <- train.lm.trend.season$residuals
+
+# run simple exponential smoothing
+# use ets() with model = "ANN" (additive error (A), no trend (N), no seasonality (N)) 
+# and alpha = 0.2 to fit simple exponential smoothing.
+ses <- ets(residuals.ts, model = "ANN", alpha = 0.2)
+ses.pred <- forecast(ses, h = nValid, level = 0)
+
+plot(ses.pred, ylim = c(-250, 300),  ylab = "Ridership", xlab = "Time", 
+     bty = "l", xaxt = "n", xlim = c(1991,2006.25), main = "", flty = 2)
+lines(train.lm.trend.season.pred$fitted, lwd = 2, col = "blue")
+axis(1, at = seq(1991, 2006, 1), labels = format(seq(1991, 2006, 1)))
+lines(ses.pred$fitted, lwd = 2, col = "blue")
+lines(valid.ts)
+```
+
+Now, let us fit the Holt-Winters exponential model
+```{r}
+# run Holt-Winters exponential smoothing
+# use ets() with option model = "MAA" to fit Holt-Winter's exponential smoothing 
+# with multiplicative error, additive trend, and additive seasonality. 
+hwin <- ets(train.ts, model = "MAA")
+
+# create predictions
+hwin.pred <- forecast(hwin, h = nValid, level = 0)
+
+# plot the series
+plot(hwin.pred, ylim = c(1300, 2600),  ylab = "Ridership", xlab = "Time", 
+    bty = "l", xaxt = "n", xlim = c(1991,2006.25), main = "", flty = 2)
+axis(1, at = seq(1991, 2006, 1), labels = format(seq(1991, 2006, 1)))
+lines(hwin.pred$fitted, lwd = 2, col = "blue")
+lines(valid.ts)
+```
+```{r}
+hwin
 ```
 
