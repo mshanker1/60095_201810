@@ -1,0 +1,132 @@
+---
+title: "Cluster Models"
+output: html_notebook
+---
+
+This notebook illustrates the following techniques:
+Cluster Analysis
+
+Now, let us run cluster analysis. Install the following packages: “cluster, NbClust, flexclust, fMultivar, ggplot2, lattice, gridbase, gridextra”
+```{r}
+forcluster <- c("cluster","NbClust","flexclust","fMultivar","ggplot2","lattice","gridbase","gridextra","plyr")
+install.packages(forcluster)
+```
+Import the toy cluster dataset
+Import the Public Utilities Dataset
+```{r}
+toyc <- read.csv("toy-cluster.dat")
+summary(toyc)
+row.names(toyc) <- toyc$Label
+toyca <- toyc[,1:2]
+d <- dist(toyca)
+summary(d)
+fit.w <- hclust(d,method="ward.D")
+fit.w$height
+fit.w$order
+plot(fit.w,hang=-1,cex=0.8,main="Ward linking clusters")
+
+```
+
+```{r}
+putil <- read.csv("Public Utilities.dat")
+putil
+summary(putil)
+```
+
+When using clustering, it is always good to standardize the variables, so you are dealing
+with variables in the same scale.
+```{r}
+row.names(putil) <- putil$Company # use Company for row names
+putils <- scale(putil[,-9]) # only use numeric columns
+summary(putils)
+```
+
+Now run the cluster analysis by
+1. Calculating distance
+2. Using Wards distance to form clusters
+```{r}
+d <- dist(putils)
+summary(d)
+fit.w <- hclust(d,method="ward.D")
+plot(fit.w,hang=-1,cex=0.8,main="Ward linking clusters")
+```
+Now, let us examine the results for different cluster sizes
+```{r}
+clusters <- cutree(fit.w,k=4)
+table(clusters)
+```
+```{r}
+aggregate(putil,by=list(cluster=clusters),mean) #original form
+aggregate(putils,by=list(cluster=clusters),mean) #scaled form
+```
+Now plot the results
+```{r}
+plot(fit.w,hang=-1,cex=0.8,main="Ward linking clusters")
+rect.hclust(fit.w,k=4)
+```
+We can also use the package pvclust to get a bootstrapped estimate for 
+number of clusters
+
+```{r}
+#install.packages("pvclust")
+library(pvclust)
+# pvclust clusters columns not rows, so transpose data
+p1 <- as.data.frame(putil)
+p1 <- p1[,-9]
+p2 <- t(p1)
+p2
+fit <- pvclust(p2, method.hclust="ward.D2",
+   method.dist="euclidean",nboot=220)
+plot(fit)
+pvrect(fit)
+```
+
+We can also do model based clustering. See https://www.statmethods.net/advstats/cluster.html
+```{r}
+# Model Based Clustering
+#install.packages("mclust")
+library(mclust)
+fit <- Mclust(putils)
+plot(fit) # plot results
+summary(fit) # display the best model 
+```
+
+Let us now perform k-means clustering. Note that you have
+to specify the number of clusters
+```{r}
+library(NbClust)
+set.seed(1234)
+devAskNewPage(ask=T)
+nc <- NbClust(putils,min.nc=2,max.nc=5,method="kmeans")
+table(nc$Best.n[1,])
+```
+```{r}
+barplot(table(nc$Best.n[1,]),
+        xlab="Number of Clusters", ylab="Number of criteria",
+        main = "Number of clusters chosen by 8 Criteria")
+```
+
+
+We will now use 4 clusters
+```{r}
+set.seed(1234)
+fit.km <- kmeans(putils,4,nstart=25)
+fit.km$size
+```
+```{r}
+fit.km$centers
+aggregate(putil[-9],by=list(cluster=clusters),mean) #unscaled form
+```
+
+We can also use WSS as a measure to determine number of clusters
+```{r}
+wss <- numeric(10)
+for (k in 1:10) wss[k] <- sum(kmeans(putils, centers=k, nstart=25)$withinss)
+plot(1:10,wss,type="b",xlab="Number of Clusters", ylab="Within Sums of squares")
+```
+
+Look for the elbow in the above graph
+```{r}
+km = kmeans(putils, 4, nstart=25)
+km
+```
