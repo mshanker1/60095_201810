@@ -127,6 +127,9 @@ plot(1:10,wss,type="b",xlab="Number of Clusters", ylab="Within Sums of squares")
 
 Look for the elbow in the above graph
 ```{r}
+set.seed()
 km = kmeans(putils, 4, nstart=25)
 km
 ```
+
+A robust version of K-means based on mediods can be invoked by using pam( ) instead of kmeans( ). The function pamk( ) in the fpc package is a wrapper for pam that also prints the suggested number of clusters based on optimum average silhouette width. 
